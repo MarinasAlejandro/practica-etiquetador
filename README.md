@@ -21,7 +21,7 @@ Ademas incluye un **buscador** que combina ambas etiquetas para resolver consult
 ├── utils.py            # Utilidades del template (rgb2gray, get_color_prob)
 ├── utils_data.py       # Utilidades del template (read_dataset, visualize_*)
 ├── images/             # Dataset de entrenamiento y test
-├── informe/            # Informe (Desenvolupament + Analisis d'eficiencia)
+├── informe/            # Informe (Desarrollo + Análisis de eficiencia)
 ├── presentacion/       # Slides para la presentacion oral
 └── app/                # Frontend Flask (upload + buscador web)
 ```

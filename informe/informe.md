@@ -30,7 +30,7 @@ PDF: el sistema se ha entrenado con las 9 clases reales del `gt.json`.
 
 ---
 
-## 1. Desenvolupament
+## 1. Desarrollo
 
 ### 1.1 Arquitectura del sistema
 
@@ -160,7 +160,7 @@ nativos sin frameworks. El JS usa `fetch` para llamar a los endpoints.
 
 ---
 
-## 2. Anàlisis d'eficiència
+## 2. Análisis de eficiencia
 
 Se han realizado cuatro análisis cuantitativos para entender el comportamiento del sistema
 y justificar las decisiones tomadas. Todos se ejecutan con `python analysis.py` y los
