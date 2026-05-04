@@ -225,26 +225,35 @@ suficiente para representar los colores principales de la prenda más algunos de
 perder colores reales del producto). Si subiéramos al 10% obtendríamos K ~7 (sobre-
 segmentación: detectaríamos sombras, brillos, etc.).
 
-### 2.4 Características del KNN (gris vs RGB vs histograma)
+### 2.4 Normalización Min-Max en el KNN
 
-Se comparan tres formas de representar las imágenes para clasificar la forma con **k = 3**:
+En el Bloc 4 §7 vimos que el KNN **decide solo a partir de distancias**, por lo que la
+escala de las variables es importante: una variable con valores grandes puede dominar el
+cálculo de la distancia. Para comprobarlo en este dataset, se compara el accuracy con
+y sin normalización Min-Max sobre los píxeles, con **k = 3**:
 
-| Representación | Dimensiones | Accuracy | Tiempo (s) |
-|---|---:|---:|---:|
-| `gris` | 4.800 | **90.25%** | 7.19 |
-| `rgb` | 14.400 | 89.78% | 20.01 |
-| `histograma` (32 bins) | 32 | 52.53% | 0.52 |
+| Configuración | Accuracy | Tiempo (s) |
+|---|---:|---:|
+| Sin normalizar | **90.25%** | 7.27 |
+| Con Min-Max | **90.25%** | 7.14 |
 
-**Conclusión:** la conversión a gris del PDF es la mejor opción.
+**Conclusión:** en este dataset la normalización **no cambia el accuracy**. Esto puede
+parecer contradictorio con la teoría a primera vista, pero tiene una explicación clara:
 
-- **RGB no aporta información útil**: el accuracy es ligeramente peor (probable
-  sobreajuste al color, que no aporta para clasificar forma) y tarda **3 veces más**
-  porque triplica las dimensiones.
-- **El histograma pierde información espacial**: 32 bins de niveles de gris solo capturan
-  la distribución global de luminosidad, pero no la silueta. Aciertos del 52% son apenas
-  mejores que el azar entre 9 clases (~11%), pero muy lejos del 90% de gris.
+- Las 4.800 *features* del KNN son **píxeles en escala de grises**, todos con el mismo
+  rango [0, 255]. No hay una variable que tenga valores más grandes que otras.
+- La normalización Min-Max divide cada valor por el mismo factor (`max - min` global),
+  lo que es equivalente a multiplicar todas las distancias por la misma constante. Como
+  KNN solo mira el **orden** de las distancias (los k más cercanos), multiplicar por una
+  constante no cambia ese orden.
 
-Esto valida la decisión de diseño del PDF: convertir a gris para clasificar forma.
+Por tanto, la normalización es **fundamental cuando hay variables con escalas distintas**
+(como en el ejemplo del Bloc 4 con "horas de actividad física" vs "IMC"), pero **es
+neutra cuando todas las variables están ya en el mismo rango**, como pasa aquí.
+
+Esta observación valida indirectamente otra decisión del PDF: pasar a gris no solo
+simplifica el espacio de características (reduce de 14.400 a 4.800 dimensiones), sino
+que también garantiza que todas las features estén en la misma escala.
 
 ---
 
@@ -253,8 +262,9 @@ Esto valida la decisión de diseño del PDF: convertir a gris para clasificar fo
 El sistema cumple los tres objetivos del enunciado y añade valor más allá:
 
 - **KNN para forma** alcanza un **91.89%** de accuracy con k = 1 y **90.25%** con k = 3
-  (recomendado por robustez). El preprocesado a escala de grises es óptimo respecto a RGB
-  o histogramas.
+  (recomendado por robustez). El preprocesado a escala de grises del PDF es la opción
+  correcta, y la normalización Min-Max resulta neutra porque todas las features ya están
+  en el mismo rango.
 - **K-Means para color** detecta correctamente los colores predominantes y `find_bestK`
   con el umbral del 20% del PDF da K medias de ~5-6, razonables para una imagen de ropa.
 - **El buscador combinado** funciona tanto sobre el ground truth como sobre las etiquetas

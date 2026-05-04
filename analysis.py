@@ -5,8 +5,10 @@
 2. Valor de K en KNN: accuracy en el conjunto de test para k = 1..11.
 3. Criterio de find_bestK: comparar el umbral del 20% del PDF con
    otros umbrales (10%, 15%, 25%, 30%) y ver si cambia la K elegida.
-4. Caracteristicas del KNN: comparar accuracy usando como features la
-   imagen en gris (4800 dims), en RGB (14400 dims) o el histograma.
+4. Normalizacion Min-Max en el KNN: comparar el accuracy con y sin
+   normalizar los valores de los pixeles, siguiendo la teoria del
+   Bloc 4 sesion 7 sobre la importancia de la escala en algoritmos
+   basados en distancias.
 
 Los resultados se imprimen por consola y se guardan en
 informe/results.json para incluirlos en el informe.
@@ -143,41 +145,40 @@ def analisis_3_criterio_bestK(imagenes, n_imagenes=30, max_K=8):
 
 
 # ====================================================================
-# Analisis 4 — Caracteristicas del KNN (gris vs RGB vs histograma)
+# Analisis 4 — Normalizacion Min-Max en el KNN
 # ====================================================================
 
-class KNN_personalizado:
-    """KNN igual al original pero con preprocesado configurable.
+class KNN_normalizable:
+    """KNN igual al original pero con opcion de normalizar Min-Max.
 
-    Permite probar diferentes representaciones de las imagenes para ver
-    cual da mejor accuracy en la clasificacion de la forma.
+    En el Bloc 4 sesion 7 se vio que K-NN decide solo a partir de
+    distancias y por eso la escala de las variables importa. Aqui
+    comprobamos si normalizar los pixeles cambia el accuracy en este
+    dataset.
     """
-    def __init__(self, train_data, labels, preproceso='gris'):
-        self.preproceso = preproceso
-        self.train_data = self._procesar(train_data)
+    def __init__(self, train_data, labels, normalizar=False):
+        self.normalizar = normalizar
+        self.train_data = self._procesar(train_data, ajustar_minmax=True)
         self.labels = np.array(labels)
 
-    def _procesar(self, data):
+    def _procesar(self, data, ajustar_minmax=False):
+        # Igual que el KNN base: pasar a gris y aplanar
         data = data.astype(float)
-        if self.preproceso == 'gris':
-            data = utils.rgb2gray(data)
-            return data.reshape(data.shape[0], -1)
-        elif self.preproceso == 'rgb':
-            return data.reshape(data.shape[0], -1)
-        elif self.preproceso == 'histograma':
-            # Histograma de niveles de gris (32 bins) por imagen
-            gris = utils.rgb2gray(data)
-            histos = np.empty((data.shape[0], 32))
-            for i in range(data.shape[0]):
-                hist, _ = np.histogram(gris[i], bins=32, range=(0, 255))
-                histos[i] = hist
-            # Normalizamos a [0,1] para que sea un descriptor
-            return histos / histos.sum(axis=1, keepdims=True)
-        else:
-            raise ValueError(f"Preproceso desconocido: {self.preproceso}")
+        data = utils.rgb2gray(data)
+        data = data.reshape(data.shape[0], -1)
+
+        if self.normalizar:
+            if ajustar_minmax:
+                # Guardamos el min y max del train para reutilizarlos
+                # con el test (el test se normaliza con el rango del train)
+                self._min = data.min()
+                self._max = data.max()
+            # Normalizacion Min-Max: x' = (x - min) / (max - min)
+            data = (data - self._min) / (self._max - self._min)
+        return data
 
     def predict(self, test_data, k):
-        test_proc = self._procesar(test_data)
+        test_proc = self._procesar(test_data, ajustar_minmax=False)
         n_test = test_proc.shape[0]
         predicciones = np.empty(n_test, dtype=self.labels.dtype)
         for i in range(n_test):
@@ -190,21 +191,20 @@ class KNN_personalizado:
         return predicciones
 
 
-def analisis_4_caracteristicas(train_imgs, train_class, test_imgs, test_class, k=3):
-    """Compara accuracy con tres representaciones de las imagenes."""
-    print(f"\n=== Analisis 4: caracteristicas del KNN (k={k}) ===")
-    representaciones = ['gris', 'rgb', 'histograma']
+def analisis_4_normalizacion(train_imgs, train_class, test_imgs, test_class, k=3):
+    """Compara accuracy del KNN con y sin normalizacion Min-Max."""
+    print(f"\n=== Analisis 4: normalizacion Min-Max en el KNN (k={k}) ===")
     tabla = {}
-    print(f"  {'representacion':<14}  {'dims':>6}  {'accuracy':>10}  {'tiempo (s)':>10}")
-    for rep in representaciones:
+    print(f"  {'configuracion':<20}  {'accuracy':>10}  {'tiempo (s)':>10}")
+    for normalizar in [False, True]:
         t0 = time.time()
-        knn = KNN_personalizado(train_imgs, train_class, preproceso=rep)
-        dims = knn.train_data.shape[1]
+        knn = KNN_normalizable(train_imgs, train_class, normalizar=normalizar)
         pred = knn.predict(test_imgs, k=k)
         acc = medir_accuracy(pred, test_class)
         elapsed = time.time() - t0
-        print(f"  {rep:<14}  {dims:>6}  {acc:>9.2f}%  {elapsed:>10.2f}")
-        tabla[rep] = {'dims': int(dims), 'accuracy': float(acc), 'tiempo_s': float(elapsed)}
+        nombre = 'con Min-Max' if normalizar else 'sin normalizar'
+        print(f"  {nombre:<20}  {acc:>9.2f}%  {elapsed:>10.2f}")
+        tabla[nombre] = {'accuracy': float(acc), 'tiempo_s': float(elapsed)}
     return tabla
 
 
@@ -222,7 +222,7 @@ def main():
     resultados['analisis_1_inicializacion'] = analisis_1_inicializacion(train_imgs)
     resultados['analisis_2_k_knn'] = analisis_2_k_knn(train_imgs, train_class, test_imgs, test_class)
     resultados['analisis_3_criterio_bestK'] = analisis_3_criterio_bestK(train_imgs)
-    resultados['analisis_4_caracteristicas'] = analisis_4_caracteristicas(
+    resultados['analisis_4_normalizacion'] = analisis_4_normalizacion(
         train_imgs, train_class, test_imgs, test_class
     )
 
