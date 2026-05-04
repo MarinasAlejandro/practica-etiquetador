@@ -150,4 +150,6 @@ print(f"[app] KNN listo. {len(PREDICTED_LABELS)} imagenes pre-etiquetadas en mem
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    # Puerto 5001 en lugar del clasico 5000 porque macOS lo usa para
+    # el AirPlay Receiver (Control Center) y bloquea Flask.
+    app.run(host='127.0.0.1', port=5001, debug=False)

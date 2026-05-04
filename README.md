@@ -37,9 +37,12 @@ pip install -r requirements.txt
 # 2. Probar el KNN
 python test_knn.py
 
-# 3. Lanzar el frontend web
+# 3. Lanzar el frontend web (despues abrir http://127.0.0.1:5001)
 python app/app.py
 ```
+
+> Nota para macOS: la app usa el puerto 5001 porque el clasico 5000
+> esta ocupado por el AirPlay Receiver del sistema.
 
 ## Autor
 

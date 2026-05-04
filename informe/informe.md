@@ -289,11 +289,61 @@ Si el proyecto continuara, las siguientes líneas serían interesantes:
 4. **Cache de las predicciones K-Means** del frontend: si el usuario sube la misma
    imagen dos veces, podríamos reutilizar el resultado.
 
+### Limitaciones y riesgos del sistema
+
+Aunque el sistema funciona bien con el dataset de la práctica, conviene ser honestos con
+los casos en los que **fallaría o produciría resultados poco fiables**:
+
+- **Imágenes con fondo muy distinto al del dataset.** Las imágenes del catálogo están
+  todas con fondos blancos o muy uniformes. Si subiéramos una foto tomada en la calle, con
+  un fondo lleno de detalles, K-Means detectaría los colores del fondo como predominantes
+  y el KNN se confundiría porque la silueta de la prenda no quedaría aislada.
+- **Prendas no incluidas en el entrenamiento.** El KNN solo conoce 9 clases. Una imagen
+  de un abrigo, un cinturón o un sombrero se clasificaría forzosamente como una de esas 9
+  (probablemente la más visualmente parecida), sin que el sistema "sepa" que se equivoca.
+  No hay un mecanismo de "no sé".
+- **Píxeles del producto vs píxeles del fondo.** K-Means analiza toda la imagen sin
+  distinguir el producto del fondo. Si una camisa azul está sobre un fondo blanco, el
+  sistema dirá "Blue + White", aunque el blanco no forma parte del producto.
+- **Sensibilidad a la escala y la pose.** Como el KNN compara píxel a píxel, dos imágenes
+  de la misma prenda en posiciones distintas (centrada vs descentrada, grande vs pequeña)
+  pueden quedar muy lejos en el espacio de características aunque sean idénticas para un
+  humano.
+- **El criterio del 20% en `find_bestK` es heurístico.** Funciona en la mayoría de casos
+  pero no es óptimo: en imágenes muy uniformes elige K demasiado pequeñas, en imágenes
+  con muchos detalles elige K demasiado grandes (lo vemos en el análisis 3).
+
+En todos estos casos el sistema **devuelve igualmente una respuesta** (no avisa de que
+no está seguro), por lo que confiar ciegamente en sus etiquetas para automatizar
+decisiones puede llevar a errores silenciosos.
+
+### Contexto de aplicación
+
+**Dónde tiene sentido este sistema:**
+- Catálogo de una tienda online controlado, donde las imágenes llegan con un formato
+  homogéneo (fondo neutro, prenda centrada, tamaño consistente). En ese contexto el
+  90% de accuracy es un buen punto de partida para automatizar el etiquetado y dejar
+  que un humano revise solo los casos dudosos.
+- Sistemas de **búsqueda interna** donde un fallo no tiene consecuencias graves: si el
+  usuario busca "pink dress" y se le cuela un vestido salmón, no pasa nada — puede
+  refinar la búsqueda o ignorarlo.
+
+**Dónde NO usaría este sistema:**
+- Aplicaciones donde un error tiene **coste real**: por ejemplo, devolución automática
+  de productos según etiquetas predichas, o decisiones de stock. Aquí un 90% de accuracy
+  significa que 1 de cada 10 productos quedaría mal categorizado, lo que se acumula con
+  miles de productos.
+- Cualquier dominio crítico (médico, seguridad, decisiones sobre personas). El sistema
+  no está diseñado para eso, no se ha validado con cross-validation y no maneja
+  incertidumbre.
+
 ### Reflexión personal
 
-El proyecto encaja perfectamente con la teoría del Bloc 4 (KNN con distancias) y del Bloc 5
-(K-Means con centroides). La parte más interesante ha sido entender que **la representación
-de los datos importa tanto como el algoritmo**: pasar de RGB a gris, o de gris a histograma,
-cambia drásticamente los resultados aunque el algoritmo (KNN) sea el mismo. También ha sido
-útil ver cómo dos algoritmos básicos (KNN supervisado + K-Means no supervisado) se combinan
-para resolver un problema real (etiquetado + búsqueda) cuando no se podría con uno solo.
+El proyecto encaja con la teoría del Bloc 4 (KNN con distancias) y del Bloc 5 (K-Means
+con centroides). La parte más interesante ha sido entender que **la representación de
+los datos importa tanto como el algoritmo**: la decisión del PDF de pasar a gris no es
+un detalle, es lo que hace que el KNN funcione bien (90% de accuracy) y que la
+normalización Min-Max no aporte nada (porque ya garantiza misma escala). También ha sido
+útil ver cómo dos algoritmos básicos (KNN supervisado + K-Means no supervisado) se
+combinan para resolver un problema real (etiquetado + búsqueda) cuando uno solo no
+podría.
