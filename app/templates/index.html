@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etiquetador de prendas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Etiquetador de prendas</h1>
+        <p class="subtitulo">
+            Sube una foto y te decimos que prenda es y de que color.
+            O busca en nuestro catalogo por forma y color.
+        </p>
+    </header>
+
+    <main>
+        <!-- Funcionalidad A: subir imagen y predecir -->
+        <section class="card">
+            <h2>1. Etiqueta una imagen</h2>
+            <p class="descripcion">
+                KNN predice la forma de la prenda. K-Means detecta los colores
+                predominantes y los traduce a uno de los 11 colores universales.
+            </p>
+
+            <form id="form-predict">
+                <label class="upload-area" for="input-image">
+                    <span id="upload-text">Haz click o arrastra una imagen aqui</span>
+                    <input type="file" id="input-image" name="image" accept="image/*" required>
+                </label>
+                <button type="submit">Etiquetar</button>
+            </form>
+
+            <div id="result-predict" class="resultado oculto">
+                <div class="preview-container">
+                    <img id="preview" alt="Imagen subida">
+                </div>
+                <div class="etiquetas">
+                    <p>Forma detectada: <strong id="result-shape"></strong></p>
+                    <p>Colores detectados: <span id="result-colors"></span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Funcionalidad B: buscador por filtros -->
+        <section class="card">
+            <h2>2. Busca en el catalogo</h2>
+            <p class="descripcion">
+                El buscador opera sobre las etiquetas que NUESTRO sistema ha
+                predicho para todo el dataset (no sobre el ground truth).
+            </p>
+
+            <form id="form-search">
+                <div class="form-row">
+                    <label for="select-shape">Forma:</label>
+                    <select id="select-shape" name="shape">
+                        <option value="">(cualquier forma)</option>
+                        {% for s in shapes %}
+                        <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="select-color">Color:</label>
+                    <select id="select-color" name="color">
+                        <option value="">(cualquier color)</option>
+                        {% for c in colors %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit">Buscar</button>
+            </form>
+
+            <p id="search-summary" class="resumen oculto"></p>
+            <div id="search-results" class="grid"></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Practica Etiquetador &middot; Alejandro Marinas &middot; Aprenentatge Automatic</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
