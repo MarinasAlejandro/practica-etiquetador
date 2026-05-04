@@ -3,6 +3,7 @@
 > **Autor:** Alejandro Marinas
 > **Asignatura:** Aprenentatge Automàtic — La Salle Gràcia
 > **Fecha:** Mayo 2026
+> **Repositorio del código:** [github.com/MarinasAlejandro/practica-etiquetador](https://github.com/MarinasAlejandro/practica-etiquetador)
 
 ---
 
