@@ -60,9 +60,17 @@ class KMeans:
                     centroides.append(pixel)
                     if len(centroides) == self.K:
                         break
+            # Si la imagen tiene menos colores distintos que K (por ejemplo
+            # una prenda muy uniforme), ajustamos K a los que realmente hay
+            # para evitar errores luego en get_centroids.
+            if len(centroides) < self.K:
+                self.K = len(centroides)
             self.centroids = np.array(centroides, dtype=float)
         elif estrategia == 'random':
-            # K pixeles aleatorios sin repeticion
+            # K pixeles aleatorios sin repeticion. Si hay menos pixeles que
+            # K, ajustamos K para evitar errores.
+            if len(self.X) < self.K:
+                self.K = len(self.X)
             indices = np.random.choice(len(self.X), self.K, replace=False)
             self.centroids = self.X[indices].astype(float)
         else:
@@ -126,6 +134,11 @@ class KMeans:
             self.fit()
             wcd = self.withinClassDistance()
             if wcd_anterior is not None:
+                # Si la WCD anterior es 0 (imagen totalmente uniforme) ya
+                # no tiene sentido seguir buscando, paramos en el K previo.
+                if wcd_anterior == 0:
+                    mejor_K = k - 1
+                    break
                 porcentaje = 100 - 100 * (wcd / wcd_anterior)
                 if porcentaje < 20:
                     mejor_K = k - 1

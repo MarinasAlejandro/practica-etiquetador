@@ -173,8 +173,8 @@ Se comparan las dos estrategias de inicialización sobre **50 imágenes** del tr
 
 | Estrategia | Iteraciones medias | WCD media | Tiempo medio (ms) |
 |---|---:|---:|---:|
-| `first` | 23.50 | 344.82 | 13.31 |
-| `random` | 21.06 | 342.53 | 11.74 |
+| `first` | 23.50 | 344.82 | 14.16 |
+| `random` | 21.06 | 342.53 | 12.37 |
 
 **Conclusión:** `random` converge ligeramente más rápido (~10% menos iteraciones) y
 encuentra una WCD final muy parecida. La diferencia es marginal en este dataset, así que
@@ -189,17 +189,19 @@ de k:
 
 | k | Accuracy | Tiempo (s) |
 |---:|---:|---:|
-| 1 | **91.89%** | 7.06 |
-| 3 | 90.25% | 7.06 |
-| 5 | 89.07% | 7.02 |
-| 7 | 89.42% | 7.23 |
-| 9 | 88.01% | 6.98 |
-| 11 | 87.78% | 7.05 |
+| 1 | **91.89%** | 7.19 |
+| 3 | 90.25% | 7.03 |
+| 5 | 89.07% | 7.03 |
+| 7 | 89.42% | 6.97 |
+| 9 | 88.01% | 6.95 |
+| 11 | 87.78% | 6.97 |
 
-**Conclusión:** k = 1 es el mejor en este dataset, y el accuracy decrece de forma
-monótona al aumentar k. Esto suele indicar que **las clases están bien separadas en el
-espacio de píxeles**: los vecinos más cercanos son casi siempre de la misma clase, y
-añadir más vecinos solo introduce ruido en la votación.
+**Conclusión:** k = 1 es el mejor en este dataset, y el accuracy **decrece en general
+al aumentar k**, con un ligero repunte en k = 7 (89.42%, frente a 89.07% con k = 5)
+que probablemente se explica por casos concretos del test que se benefician de
+vecinos algo más lejanos. Esta tendencia descendente sugiere que **las clases están
+bien separadas en el espacio de píxeles**: los vecinos más cercanos son casi siempre
+de la misma clase, y añadir más vecinos solo introduce ruido en la votación.
 
 A pesar de ello, **se recomienda usar k = 3 en producción**: k = 1 es muy sensible a
 outliers (una imagen mal etiquetada o muy rara puede contaminar las predicciones), mientras

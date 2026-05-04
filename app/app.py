@@ -95,9 +95,13 @@ def predict():
 
     img_array = np.array(img)
 
-    # Aplicamos el etiquetador end-to-end
-    resultado = my_labeling.predict_image(img_array, KNN_MODEL)
-    return jsonify(resultado)
+    # Aplicamos el etiquetador end-to-end. Si algo sale mal (imagen rara
+    # que rompe el KMeans, por ejemplo), devolvemos un error legible.
+    try:
+        resultado = my_labeling.predict_image(img_array, KNN_MODEL)
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'error': f'No se pudo etiquetar la imagen: {e}'}), 500
 
 
 @app.route('/search')
