@@ -13,6 +13,11 @@ __pycache__/
 # macOS
 .DS_Store
 
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
 # IDEs
 .vscode/
 .idea/

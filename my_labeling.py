@@ -5,6 +5,8 @@ Junta los dos modelos (KNN para la forma, KMeans para el color) y permite:
   2. Buscar en el dataset las imagenes que cumplan unos filtros.
 """
 
+import re
+
 import numpy as np
 
 import KNN as KNN_module
@@ -40,6 +42,57 @@ def _normalizar_forma(forma):
     """Convierte la palabra del usuario a la etiqueta del dataset."""
     clave = forma.strip().lower().replace(' ', '')
     return SHAPE_SYNONYMS.get(clave, forma.strip().title())
+
+
+# Set de colores conocidos en minusculas (para detectar tokens del usuario).
+# El nombre canonico vive en utils.colors; aqui solo lo usamos para matching.
+_COLORS_LOWER = {c.lower() for c in utils.colors.tolist()}
+
+
+def parse_query_text(texto):
+    """Parsea una busqueda en lenguaje natural ("pink dress", "blue handbag").
+
+    Identifica el primer color conocido y la primera forma conocida del texto,
+    aceptando sinonimos en singular/plural via SHAPE_SYNONYMS. Devuelve un
+    dict con las claves 'color' y 'shape' (None si no se ha detectado nada
+    de ese tipo).
+
+    Tokeniza por espacios, guiones y comas. No es un parser NLP completo:
+    solo cubre el caso de uso del PDF ("Pink dress") y similares. Si el
+    usuario escribe algo mas complejo, se ignora.
+
+    >>> parse_query_text("pink dress") == {'color': 'Pink', 'shape': 'Dresses'}
+    True
+    >>> parse_query_text("DRESS") == {'color': None, 'shape': 'Dresses'}
+    True
+    >>> parse_query_text("flip flops") == {'color': None, 'shape': 'Flip Flops'}
+    True
+    >>> parse_query_text("") == {'color': None, 'shape': None}
+    True
+    """
+    if not texto:
+        return {'color': None, 'shape': None}
+
+    # Tokenizamos: separamos por espacios, guiones, comas
+    tokens = re.split(r'[\s,\-]+', texto.strip().lower())
+    tokens = [t for t in tokens if t]
+
+    color = None
+    shape = None
+
+    # Primero intentamos detectar "flip flops" (token compuesto)
+    joined = ''.join(tokens)
+    if 'flipflop' in joined or 'flipflops' in joined:
+        shape = 'Flip Flops'
+
+    for tok in tokens:
+        if color is None and tok in _COLORS_LOWER:
+            color = tok.capitalize()
+            continue
+        if shape is None and tok in SHAPE_SYNONYMS:
+            shape = SHAPE_SYNONYMS[tok]
+
+    return {'color': color, 'shape': shape}
 
 
 def retrieval_by_color(images, color_labels, query_color):

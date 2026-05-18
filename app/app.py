@@ -104,19 +104,50 @@ def predict():
         return jsonify({'error': f'No se pudo etiquetar la imagen: {e}'}), 500
 
 
+LIMIT_MIN = 1
+LIMIT_MAX = 200
+LIMIT_DEFAULT = 24
+
+
 @app.route('/search')
 def search():
     """Busca imagenes del dataset pre-etiquetadas que cumplan los filtros.
 
-    Acepta tanto color y/o forma. Si no se pasa ninguno, devuelve vacio
-    para no inundar al usuario con todo el dataset.
+    Admite tres formas de filtrar (combinables):
+      - ?color=Pink&shape=Dresses    (selects clasicos)
+      - ?q=pink dress                (busqueda textual estilo PDF)
+      - mezcla de ambos: los selects tienen prioridad si estan rellenos,
+        y q rellena los huecos. Asi un usuario que escribe "pink dress"
+        pero ademas filtra forma=Shirts acaba viendo camisas rosas.
+
+    Si no se pasa ningun filtro, devuelve vacio para no inundar la UI.
     """
     color = request.args.get('color', '').strip()
     forma = request.args.get('shape', '').strip()
-    limite = int(request.args.get('limit', 24))
+    q = request.args.get('q', '').strip()
+
+    # Validamos limit antes de buscar para no gastar trabajo en una request rota.
+    try:
+        limite = int(request.args.get('limit', LIMIT_DEFAULT))
+    except (TypeError, ValueError):
+        return jsonify({
+            'error': "Parametro 'limit' invalido: debe ser un entero.",
+        }), 400
+    if limite < LIMIT_MIN or limite > LIMIT_MAX:
+        return jsonify({
+            'error': f"Parametro 'limit' fuera de rango ({LIMIT_MIN}-{LIMIT_MAX}).",
+        }), 400
+
+    # q rellena los huecos que no haya cubierto el select.
+    if q:
+        parsed = my_labeling.parse_query_text(q)
+        if not color and parsed['color']:
+            color = parsed['color']
+        if not forma and parsed['shape']:
+            forma = parsed['shape']
 
     if not color and not forma:
-        return jsonify({'results': [], 'total': 0})
+        return jsonify({'results': [], 'total': 0, 'shown': 0})
 
     color_norm = color.capitalize() if color else None
     forma_norm = my_labeling._normalizar_forma(forma) if forma else None
@@ -134,7 +165,12 @@ def search():
 
     total = len(resultados)
     resultados = resultados[:limite]
-    return jsonify({'results': resultados, 'total': total, 'shown': len(resultados)})
+    return jsonify({
+        'results': resultados,
+        'total': total,
+        'shown': len(resultados),
+        'parsed': {'color': color_norm, 'shape': forma_norm},
+    })
 
 
 @app.route('/dataset-image/<split>/<name>')

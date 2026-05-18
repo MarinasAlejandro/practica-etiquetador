@@ -61,6 +61,7 @@ formSearch.addEventListener('submit', async (e) => {
 
     const shape = document.getElementById('select-shape').value;
     const color = document.getElementById('select-color').value;
+    const q = document.getElementById('input-q').value.trim();
 
     const summary = document.getElementById('search-summary');
     const grid = document.getElementById('search-results');
@@ -69,8 +70,8 @@ formSearch.addEventListener('submit', async (e) => {
     summary.classList.remove('oculto');
     grid.innerHTML = '';
 
-    if (!shape && !color) {
-        summary.textContent = 'Selecciona al menos un filtro (forma o color).';
+    if (!shape && !color && !q) {
+        summary.textContent = 'Escribe una busqueda libre o selecciona al menos un filtro.';
         return;
     }
 
@@ -78,12 +79,21 @@ formSearch.addEventListener('submit', async (e) => {
         const params = new URLSearchParams();
         if (shape) params.append('shape', shape);
         if (color) params.append('color', color);
+        if (q) params.append('q', q);
         params.append('limit', 24);
 
         const respuesta = await fetch(`/search?${params}`);
         const datos = await respuesta.json();
 
-        summary.textContent = `${datos.total} imagenes encontradas (mostrando ${datos.shown}).`;
+        if (!respuesta.ok) {
+            summary.textContent = datos.error || 'Error en la busqueda.';
+            return;
+        }
+
+        const detectado = datos.parsed && (datos.parsed.color || datos.parsed.shape)
+            ? ` [color=${datos.parsed.color || '-'}, forma=${datos.parsed.shape || '-'}]`
+            : '';
+        summary.textContent = `${datos.total} imagenes encontradas (mostrando ${datos.shown})${detectado}.`;
 
         for (const item of datos.results) {
             const div = document.createElement('div');

@@ -29,6 +29,25 @@ Handbags). Cada imagen tiene además una lista de colores reales (puede tener va
 destacar que el dataset incluye una clase extra (Heels) que no aparece en el enunciado del
 PDF: el sistema se ha entrenado con las 9 clases reales del `gt.json`.
 
+![Distribución de clases por split](figures/fig1_distribucion_clases.png)
+
+La distribución por clase está bastante equilibrada: en el train hay entre 232 (Shorts) y
+290 (Shirts) imágenes por clase, con Dresses=278, Handbags=277, Heels=265, Flip Flops=258,
+Sandals=254, Socks=241 y Jeans=233 ocupando el resto del rango. Hay ligeras diferencias
+entre clases, pero no un desbalance fuerte que distorsione las métricas: el dataset oficial
+está deliberadamente nivelado.
+
+### Nota metodológica — duplicados entre train y test
+
+Antes de presentar resultados conviene avisar de una característica conocida del dataset
+oficial: **219 imágenes del test (un 25,7 %) son binariamente idénticas a imágenes que
+también están en el train**. El cálculo es trivial: hash SHA-256 del archivo .jpg y cruzar
+los dos splits (ver `analyze_duplicates.py`).
+
+No se modifica el split oficial — los criterios de aceptación de la práctica piden
+mantenerlo — pero **reportamos el accuracy también sin los duplicados** como análisis
+adicional (sección 2.5) para que los números sean comparables con un test "limpio".
+
 ---
 
 ## 1. Desarrollo
@@ -82,6 +101,31 @@ test×train×4800 ocuparía gigabytes.
 Cada píxel de la imagen se trata como un **punto en el espacio RGB de 3 dimensiones**. Una
 imagen 80×60 se convierte en 4.800 puntos. K-Means agrupa esos puntos en K clusters; cada
 centroide representa un color predominante.
+
+#### Por qué K-Means detecta blanco o gris en muchas prendas
+
+El PDF de la práctica especifica que K-Means trabaja sobre **todos los píxeles RGB de la
+imagen**, sin ninguna segmentación previa del producto. Eso significa que el algoritmo no
+distingue entre "píxeles de la prenda" y "píxeles del fondo": para él todos son
+observaciones del espacio de color de 3 dimensiones que hay que agrupar.
+
+Las imágenes del catálogo están tomadas sobre **fondos blancos o muy claros**, y la prenda
+suele ocupar solo el centro de la imagen. Si una camisa azul ocupa la mitad de los píxeles
+y la otra mitad es fondo blanco, K-Means encontrará dos clusters principales: uno con
+centroide cercano a (0, 0, 255) → *Blue* y otro cercano a (255, 255, 255) → *White*. Lo
+mismo pasa con el gris en sombras suaves del fondo.
+
+Este comportamiento **es correcto según el enunciado** (analizar todos los píxeles), pero
+conviene tenerlo presente al leer las predicciones: que aparezca "White" o "Grey" en una
+prenda no es un error, es la consecuencia de que el fondo forma parte de la imagen que
+recibimos. La sección 3 (Ideas de mejora) describe cómo se podría segmentar la prenda con
+`gt_reduced.json` para evitarlo si fuera necesario.
+
+![K-Means cuantiza la imagen entera, fondo incluido](figures/fig6_kmeans_visual.png)
+
+En la figura se ve la imagen original, la versión cuantizada con K = 4 centroides, y la
+nube de puntos RGB con cada cluster pintado del color de su centroide. El fondo aparece
+como un cluster propio porque, en el espacio RGB, es perfectamente separable del resto.
 
 #### Algoritmo
 
@@ -147,8 +191,21 @@ El backend (`app/app.py`) expone tres endpoints:
 |---|---|---|
 | `/` | GET | Home con las dos secciones (upload y buscador) |
 | `/predict` | POST | Recibe una imagen subida y devuelve `{shape, colors, K}` |
-| `/search` | GET | Filtra el dataset pre-etiquetado por color/forma |
+| `/search` | GET | Filtra el dataset pre-etiquetado por color/forma/texto libre |
 | `/dataset-image/<split>/<name>` | GET | Sirve las imágenes del dataset al frontend |
+
+El endpoint `/search` acepta tres parámetros combinables:
+
+- `color=Pink` y `shape=Dresses` — los selects clásicos.
+- `q=pink dress` — **búsqueda textual** que parsea lenguaje natural. El PDF habla
+  explícitamente de queries tipo "Pink dress", así que el buscador admite también esta
+  forma de entrada. Internamente, `parse_query_text` (en `my_labeling.py`) tokeniza el
+  texto, identifica el primer color y la primera forma conocidos (con sinónimos
+  singular/plural), y rellena los huecos que dejen los selects. Si el usuario combina
+  texto y selects, los selects tienen prioridad.
+- `limit=24` — número máximo de resultados, validado en el rango [1, 200]. Una entrada
+  no entera (`?limit=abc`) o fuera de rango devuelve **HTTP 400** con mensaje claro, no
+  un 500 silencioso.
 
 Al arrancar, el servidor entrena el KNN (~0.2 s) y carga `predicted_labels.json`
 (generado por `preprocess_dataset.py`) en memoria. El **buscador opera sobre las etiquetas
@@ -183,6 +240,8 @@ ambas estrategias son válidas. El sistema usa `'first'` por defecto porque es *
 (siempre da el mismo resultado para la misma imagen) y porque facilita la depuración. Si
 la reproducibilidad no es crítica, `'random'` es ligeramente más eficiente.
 
+![Comparativa first vs random](figures/fig5_inicializacion.png)
+
 ### 2.2 Valor de K en KNN
 
 Se mide el **accuracy** del KNN en el conjunto de test (851 imágenes) para varios valores
@@ -209,6 +268,13 @@ outliers (una imagen mal etiquetada o muy rara puede contaminar las predicciones
 que k = 3 mantiene un accuracy muy similar (90.25%) y es más robusto. El tiempo de
 predicción no varía con k (la fase costosa es calcular distancias).
 
+![Accuracy del KNN por k](figures/fig2_knn_accuracy_k.png)
+
+La curva muestra la tendencia descendente característica de un dataset bien separado:
+añadir vecinos sólo introduce ruido en la votación. El ligero repunte en k = 7 se debe a
+muestras puntuales del test que se benefician de vecinos algo más lejanos (probablemente
+sandalias y heels que se solapan visualmente).
+
 ### 2.3 Criterio de `find_bestK`
 
 Se comparan distintos umbrales del criterio de decremento de WCD sobre **30 imágenes**:
@@ -227,6 +293,17 @@ suficiente para representar los colores principales de la prenda más algunos de
 (blanco, gris). Si bajáramos al 30% obtendríamos K medias de ~4 (más simple pero podríamos
 perder colores reales del producto). Si subiéramos al 10% obtendríamos K ~7 (sobre-
 segmentación: detectaríamos sombras, brillos, etc.).
+
+![K elegida por umbral en find_bestK](figures/fig4_umbrales_bestK.png)
+
+Para visualizar el criterio sobre una imagen concreta, la curva del codo de la WCD muestra
+en qué K se "estabiliza" la mejora:
+
+![Curva del codo de la WCD](figures/fig3_codo_wcd.png)
+
+A la izquierda, la WCD desciende rápido al pasar de K = 2 a K = 4 y luego se aplana. A la
+derecha, el decremento porcentual cae bajo el 20% justo en ese punto, que es donde el
+algoritmo se detiene. Es la versión visual del criterio del PDF.
 
 ### 2.4 Normalización Min-Max en el KNN
 
@@ -257,6 +334,67 @@ neutra cuando todas las variables están ya en el mismo rango**, como pasa aquí
 Esta observación valida indirectamente otra decisión del PDF: pasar a gris no solo
 simplifica el espacio de características (reduce de 14.400 a 4.800 dimensiones), sino
 que también garantiza que todas las features estén en la misma escala.
+
+### 2.5 Análisis metodológico — duplicados train/test (extra)
+
+Como se ha avisado en la nota metodológica de la introducción, el split oficial contiene
+**219 imágenes (25,7 % del test)** cuyo contenido binario es idéntico al de imágenes del
+train. Mantener el split oficial es obligatorio, pero conviene reportar **qué pasaría si
+los quitáramos**, para entender cuánto del 90 % de accuracy se debe a memorización pura.
+
+Se vuelve a calcular el accuracy del KNN (k = 3) sobre tres subsets del test:
+
+| Subset | n imágenes | Accuracy |
+|---|---:|---:|
+| Test entero (cifra oficial) | 851 | **90,25 %** |
+| Test sin duplicados (test limpio) | 632 | **89,72 %** |
+| Solo las duplicadas | 219 | **91,78 %** |
+
+**Conclusión metodológica:** la diferencia entre el accuracy oficial y el "limpio" es de
+apenas **0,53 puntos porcentuales**. Esto es una buena noticia: aunque el dataset tiene
+duplicados, el KNN **no está apoyándose exclusivamente en memorizarlos**. La accuracy sobre
+las duplicadas (91,78 %) tampoco llega al 100 %, y la razón principal es la **k = 3** del
+clasificador: aunque cada duplicada tenga un vecino idéntico (distancia 0) en el train,
+los otros dos vecinos pueden ser de otra clase y ganar la votación por mayoría. Con k = 1
+las duplicadas sí darían el 100 % porque el vecino más cercano sería siempre la copia
+exacta.
+
+![Accuracy con y sin duplicados](figures/fig7_duplicados.png)
+
+A efectos de la rúbrica del PDF, la cifra oficial sigue siendo 90,25 %. Reportamos la
+limpia (89,72 %) como **análisis de robustez metodológica**, no como sustitución.
+
+Es importante recalcar que **el split oficial NO se modifica**: ni `gt.json` ni el orden
+de las imágenes. El análisis se hace post-hoc cruzando hashes SHA-256 y filtrando las
+predicciones por una máscara booleana. El script reproducible es `analyze_duplicates.py`
+y guarda el detalle en `informe/duplicates_analysis.json`.
+
+### 2.6 Matriz de confusión (qué clases se confunden)
+
+Más allá del accuracy global, conviene saber **qué clases se solapan**. La matriz de
+confusión normalizada por fila (cada fila es una clase real, cada columna una predicción)
+da esta información de un vistazo:
+
+![Matriz de confusión KNN k=3](figures/fig8_matriz_confusion.png)
+
+Lecturas principales:
+
+- La diagonal es fuerte en la mayoría de clases, pero **no uniforme**: Heels se queda
+  alrededor del 77,8 % y Sandals sobre el 81,9 %, claramente por debajo del resto. Son
+  las dos clases con más confusión.
+- Los errores más frecuentes están en **el calzado**: Sandals ↔ Heels ↔ Flip Flops se
+  confunden entre sí porque visualmente comparten silueta (suela, tira/correa, base
+  pequeña). Era la sospecha que se mencionaba en la sección de "Ideas de mejora" del
+  borrador inicial, ahora confirmada con datos.
+- Dresses se acerca al 93,5 % y Shirts queda en valores similares: no se confunden con
+  nada relevante porque su silueta es muy distinta del resto.
+- Socks comete errores, pero **no concentrados en una sola clase**: se reparten entre
+  varias categorías sin un destino dominante, así que no hay un "vecino visual" claro
+  contra el que protegerla.
+
+Esto sugiere que si alguna vez quisiéramos mejorar la accuracy más allá del 90 %, la
+ganancia mayor vendría de **distinguir mejor entre tipos de calzado** (con features de
+silueta o un modelo dedicado), no de afinar el resto.
 
 ---
 

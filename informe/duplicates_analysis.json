@@ -1,0 +1,51 @@
+{
+  "n_train_archivos": 2328,
+  "n_test_archivos": 851,
+  "n_duplicados": 219,
+  "porcentaje_test_duplicado": 25.73,
+  "accuracy_oficial_k3": 90.25,
+  "accuracy_sin_duplicados_k3": 89.72,
+  "accuracy_solo_duplicados_k3": 91.78,
+  "ejemplos_duplicados": [
+    [
+      "33504",
+      "27226"
+    ],
+    [
+      "6753",
+      "6753"
+    ],
+    [
+      "40754",
+      "40754"
+    ],
+    [
+      "6310",
+      "6310"
+    ],
+    [
+      "19124",
+      "19124"
+    ],
+    [
+      "25450",
+      "25450"
+    ],
+    [
+      "16985",
+      "16985"
+    ],
+    [
+      "38668",
+      "38668"
+    ],
+    [
+      "2251",
+      "2251"
+    ],
+    [
+      "30250",
+      "30250"
+    ]
+  ]
+}
