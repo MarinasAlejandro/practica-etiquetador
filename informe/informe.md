@@ -42,7 +42,7 @@ está deliberadamente nivelado.
 Antes de presentar resultados conviene avisar de una característica conocida del dataset
 oficial: **219 imágenes del test (un 25,7 %) son binariamente idénticas a imágenes que
 también están en el train**. El cálculo es trivial: hash SHA-256 del archivo .jpg y cruzar
-los dos splits (ver `analyze_duplicates.py`).
+los dos splits (ver `scripts/analyze_duplicates.py`).
 
 No se modifica el split oficial — los criterios de aceptación de la práctica piden
 mantenerlo — pero **reportamos el accuracy también sin los duplicados** como análisis
@@ -123,9 +123,14 @@ recibimos. La sección 3 (Ideas de mejora) describe cómo se podría segmentar l
 
 ![K-Means cuantiza la imagen entera, fondo incluido](figures/fig6_kmeans_visual.png)
 
-En la figura se ve la imagen original, la versión cuantizada con K = 4 centroides, y la
-nube de puntos RGB con cada cluster pintado del color de su centroide. El fondo aparece
-como un cluster propio porque, en el espacio RGB, es perfectamente separable del resto.
+A la izquierda, la imagen original (un vestido lavanda sobre fondo claro). En el centro,
+la versión **cuantizada con K = 5** centroides: cada píxel se ha reemplazado por su
+centroide. A la derecha, la **nube de puntos RGB** con una muestra de los píxeles
+pintados de su propio color, y los **centroides marcados con una X grande**. Se ve cómo
+los píxeles forman dos "ramas" — una hacia los tonos cálidos (piel/cabello) y otra hacia
+el malva del vestido — y cómo los centroides se sitúan en el centro de cada rama. El
+fondo aparece como cluster propio porque, en el espacio RGB, es perfectamente separable
+del resto.
 
 #### Algoritmo
 
@@ -208,7 +213,7 @@ El endpoint `/search` acepta tres parámetros combinables:
   un 500 silencioso.
 
 Al arrancar, el servidor entrena el KNN (~0.2 s) y carga `predicted_labels.json`
-(generado por `preprocess_dataset.py`) en memoria. El **buscador opera sobre las etiquetas
+(generado por `scripts/preprocess_dataset.py`) en memoria. El **buscador opera sobre las etiquetas
 que NUESTRO sistema ha predicho** para todo el dataset, no sobre el ground truth — esto
 simula un escenario realista de tienda online donde los productos llegan sin etiquetas y
 el etiquetador automático las genera.
@@ -221,7 +226,7 @@ nativos sin frameworks. El JS usa `fetch` para llamar a los endpoints.
 ## 2. Análisis de eficiencia
 
 Se han realizado cuatro análisis cuantitativos para entender el comportamiento del sistema
-y justificar las decisiones tomadas. Todos se ejecutan con `python analysis.py` y los
+y justificar las decisiones tomadas. Todos se ejecutan con `python scripts/analysis.py` y los
 resultados se guardan en `informe/results.json`.
 
 ### 2.1 Inicialización de centroides (first vs random)
@@ -366,7 +371,7 @@ limpia (89,72 %) como **análisis de robustez metodológica**, no como sustituci
 
 Es importante recalcar que **el split oficial NO se modifica**: ni `gt.json` ni el orden
 de las imágenes. El análisis se hace post-hoc cruzando hashes SHA-256 y filtrando las
-predicciones por una máscara booleana. El script reproducible es `analyze_duplicates.py`
+predicciones por una máscara booleana. El script reproducible es `scripts/analyze_duplicates.py`
 y guarda el detalle en `informe/duplicates_analysis.json`.
 
 ### 2.6 Matriz de confusión (qué clases se confunden)

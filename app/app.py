@@ -61,7 +61,7 @@ def cargar_etiquetas_predichas():
         with open(path) as f:
             return json.load(f)
     print(f"[app] AVISO: {path} no existe. El buscador devolvera vacio.")
-    print(f"      Ejecuta primero: python preprocess_dataset.py")
+    print(f"      Ejecuta primero: python scripts/preprocess_dataset.py")
     return {}
 
 

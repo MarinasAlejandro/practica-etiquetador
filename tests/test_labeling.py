@@ -5,8 +5,14 @@
 3. Prueba retrievals (por color, por forma, combinado) sobre el ground truth.
 """
 
+import os
+import sys
 import time
 import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from KNN import KNN
 from my_labeling import (

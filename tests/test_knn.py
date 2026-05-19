@@ -5,8 +5,14 @@ valores de k. Sirve para verificar que la implementacion funciona y para
 hacernos una idea del rendimiento del modelo.
 """
 
+import os
+import sys
 import time
 import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from KNN import KNN
 from utils_data import read_dataset

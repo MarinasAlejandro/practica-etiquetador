@@ -16,13 +16,22 @@ informe/results.json para incluirlos en el informe.
 
 import json
 import os
+import sys
 import time
 import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from KNN import KNN
 import Kmeans
 import utils
 from utils_data import read_dataset
+
+IMAGES_DIR = os.path.join(ROOT, 'images')
+GT_PATH = os.path.join(IMAGES_DIR, 'gt.json')
+RESULTS_PATH = os.path.join(ROOT, 'informe', 'results.json')
 
 
 # ====================================================================
@@ -215,7 +224,7 @@ def analisis_4_normalizacion(train_imgs, train_class, test_imgs, test_class, k=3
 def main():
     print("Cargando dataset...")
     train_imgs, train_class, _, test_imgs, test_class, _ = read_dataset(
-        root_folder='./images/', gt_json='./images/gt.json'
+        root_folder=IMAGES_DIR + os.sep, gt_json=GT_PATH
     )
 
     resultados = {}
@@ -226,7 +235,7 @@ def main():
         train_imgs, train_class, test_imgs, test_class
     )
 
-    out_path = './informe/results.json'
+    out_path = RESULTS_PATH
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, 'w') as f:
         json.dump(resultados, f, indent=2)

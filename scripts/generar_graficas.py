@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-# Permitimos lanzar este script desde la raiz o desde informe/.
+# Permitimos lanzar este script desde la raiz o desde scripts/.
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_THIS_DIR)
 if _PROJECT_ROOT not in sys.path:
@@ -199,15 +199,18 @@ def fig_inicializacion(results):
 # 6. Vista visual del K-Means sobre una prenda (RGB + cuantizacion)
 # -----------------------------------------------------------------------------
 
-def fig_kmeans_visual(img_path, K=4):
+def fig_kmeans_visual(img_path, K=5):
     print("Fig 6: K-Means visual sobre una prenda")
     img = np.array(Image.open(img_path).convert('RGB').resize((60, 80)))
     km = Kmeans.KMeans(img, K=K)
     km.fit()
     cuantizada = km.centroids[km.labels].reshape(img.shape).astype(np.uint8)
     nombres = Kmeans.get_colors(km.centroids)
+    # Quitamos duplicados manteniendo el orden de aparicion (varios centroides
+    # pueden caer en el mismo nombre cuando son tonos parecidos)
+    nombres_unicos = list(dict.fromkeys(nombres))
 
-    fig = plt.figure(figsize=(11, 4))
+    fig = plt.figure(figsize=(12, 4.5))
 
     ax1 = fig.add_subplot(1, 3, 1)
     ax1.imshow(img)
@@ -219,24 +222,27 @@ def fig_kmeans_visual(img_path, K=4):
     ax2.set_title(f'Cuantizada con K={K} colores')
     ax2.axis('off')
 
-    # Paleta de centroides en orden
+    # Nube de puntos RGB. Cada pixel se pinta del color de SU pixel original
+    # (no del centroide) para que la nube refleje el contenido real de la
+    # imagen. Asi se ve donde estan los puntos en el cubo RGB.
     ax3 = fig.add_subplot(1, 3, 3, projection='3d')
-    Xs = km.X[::20]
-    labels = km.labels[::20]
+    paso = max(1, len(km.X) // 1500)  # ~1500 puntos: suficiente y rapido
+    pts = km.X[::paso]
+    cols = pts / 255.0
+    ax3.scatter(pts[:, 0], pts[:, 1], pts[:, 2], s=8, c=cols, alpha=0.7)
+    # Marcamos los centroides con cruces grandes
     for k in range(km.K):
-        pts = Xs[labels == k]
-        if len(pts) == 0:
-            continue
-        ax3.scatter(pts[:, 0], pts[:, 1], pts[:, 2], s=4,
-                    c=[km.centroids[k] / 255.0])
-    ax3.set_xlabel('R')
-    ax3.set_ylabel('G')
-    ax3.set_zlabel('B')
-    ax3.set_title(f'Pixeles en RGB ({" + ".join(nombres)})')
+        c = km.centroids[k]
+        ax3.scatter(c[0], c[1], c[2], s=180, marker='X',
+                    edgecolors='black', linewidths=1.5,
+                    c=[c / 255.0])
+    ax3.set_xlim(0, 255); ax3.set_ylim(0, 255); ax3.set_zlim(0, 255)
+    ax3.set_xlabel('R'); ax3.set_ylabel('G'); ax3.set_zlabel('B')
+    ax3.set_title(f'Pixeles en RGB + centroides (X)\nColores: {", ".join(nombres_unicos)}')
 
     fig.suptitle(
         'K-Means analiza TODOS los pixeles RGB de la imagen, incluyendo el fondo.\n'
-        'Por eso suele aparecer Blanco/Gris cuando el fondo es uniforme.',
+        'Cada cruz (X) es un centroide; los puntos son una muestra de los pixeles reales.',
         fontsize=10
     )
     guardar('fig6_kmeans_visual.png')
@@ -265,15 +271,25 @@ def fig_duplicados(dup_results):
     ax1.set_title('Accuracy del KNN (k=3) segun subset del test')
     ax1.set_ylim(80, 100)
 
-    # Pie con la fraccion duplicada
+    # Barras apiladas (en lugar de pie chart) — se leen mejor.
     n_dup = dup_results['n_duplicados']
     n_total = dup_results['n_test_archivos']
-    sizes = [n_dup, n_total - n_dup]
-    ax2.pie(sizes,
-            labels=[f'duplicadas ({n_dup})', f'unicas ({n_total - n_dup})'],
-            colors=['#d62728', '#bbbbbb'],
-            autopct='%1.1f%%', startangle=90)
+    n_uni = n_total - n_dup
+    pct_dup = 100.0 * n_dup / n_total
+    pct_uni = 100.0 * n_uni / n_total
+    ax2.barh([0], [pct_uni], color='#bbbbbb', edgecolor='black',
+             label=f'unicas: {n_uni} ({pct_uni:.1f}%)')
+    ax2.barh([0], [pct_dup], left=[pct_uni], color='#d62728', edgecolor='black',
+             label=f'duplicadas: {n_dup} ({pct_dup:.1f}%)')
+    ax2.text(pct_uni / 2, 0, f'unicas\n{n_uni}', ha='center', va='center',
+             color='black', fontweight='bold')
+    ax2.text(pct_uni + pct_dup / 2, 0, f'duplicadas\n{n_dup}',
+             ha='center', va='center', color='white', fontweight='bold')
+    ax2.set_xlim(0, 100)
+    ax2.set_xlabel('Porcentaje del test (%)')
+    ax2.set_yticks([])
     ax2.set_title(f'Composicion del test ({n_total} imagenes)')
+    ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
 
     fig.suptitle('Imagenes duplicadas entre train y test',
                  fontweight='bold')
@@ -297,10 +313,10 @@ def fig_matriz_confusion(train_imgs, train_class, test_imgs, test_class, k=3):
     for real, p in zip(test_class, pred):
         mat[idx[real], idx[p]] += 1
 
-    # Normalizamos por fila para verlo en porcentaje
+    # Normalizamos por fila (recall por clase): cada fila suma 100 %.
     mat_norm = mat / mat.sum(axis=1, keepdims=True) * 100
 
-    fig, ax = plt.subplots(figsize=(7.5, 6.5))
+    fig, ax = plt.subplots(figsize=(8, 7))
     im = ax.imshow(mat_norm, cmap='Blues', vmin=0, vmax=100)
     ax.set_xticks(range(n))
     ax.set_yticks(range(n))
@@ -308,13 +324,25 @@ def fig_matriz_confusion(train_imgs, train_class, test_imgs, test_class, k=3):
     ax.set_yticklabels(clases)
     ax.set_xlabel('Prediccion')
     ax.set_ylabel('Real')
-    ax.set_title(f'Matriz de confusion KNN (k={k}) - % por fila')
+    ax.set_title(f'Matriz de confusion KNN (k={k}) - % por fila\n'
+                 f'(numero pequeno = conteo absoluto)')
 
+    # En cada celda: porcentaje grande (lo que coincide con el colorbar) +
+    # conteo absoluto debajo en pequenito.
     for i in range(n):
         for j in range(n):
-            color = 'white' if mat_norm[i, j] > 50 else 'black'
-            ax.text(j, i, f'{mat[i, j]}', ha='center', va='center',
-                    fontsize=8, color=color)
+            pct = mat_norm[i, j]
+            cnt = mat[i, j]
+            color = 'white' if pct > 50 else 'black'
+            if pct >= 0.5:
+                ax.text(j, i - 0.15, f'{pct:.1f}%', ha='center', va='center',
+                        fontsize=9, color=color, fontweight='bold')
+                ax.text(j, i + 0.22, f'n={cnt}', ha='center', va='center',
+                        fontsize=7, color=color)
+            elif cnt > 0:
+                # Celdas <0.5 %: solo el conteo, sin %
+                ax.text(j, i, f'{cnt}', ha='center', va='center',
+                        fontsize=8, color=color)
 
     fig.colorbar(im, ax=ax, label='% por fila')
     guardar('fig8_matriz_confusion.png')
@@ -337,15 +365,18 @@ def main():
         gt_json=os.path.join(ROOT, 'images', 'gt.json'),
     )
 
-    # Imagen ejemplo para visualizar K-Means
-    img_ejemplo = os.path.join(ROOT, 'images', 'train', '10004.jpg')
+    # Imagen ejemplo para la curva del codo (cualquier prenda sirve)
+    img_codo = os.path.join(ROOT, 'images', 'train', '10004.jpg')
+    # Imagen multicolor (vestido con 6 colores en el GT) para la visual K-Means:
+    # asi la nube RGB se ve repartida en el cubo en vez de pegada al origen.
+    img_visual = os.path.join(ROOT, 'images', 'train', '48525.jpg')
 
     fig_distribucion_clases(train_class, test_class)
     fig_knn_accuracy_k(results)
-    fig_codo_wcd(img_ejemplo)
+    fig_codo_wcd(img_codo)
     fig_umbrales_bestK(results)
     fig_inicializacion(results)
-    fig_kmeans_visual(img_ejemplo, K=4)
+    fig_kmeans_visual(img_visual, K=5)
     fig_duplicados(dup_results)
     fig_matriz_confusion(train_imgs, train_class, test_imgs, test_class, k=3)
 

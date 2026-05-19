@@ -20,15 +20,19 @@ se guardan en informe/duplicates_analysis.json para citarlos en el informe.
 import hashlib
 import json
 import os
+import sys
 import time
 
 import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from KNN import KNN
 from utils_data import read_dataset
 
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
 IMAGES_DIR = os.path.join(ROOT, 'images')
 GT_PATH = os.path.join(IMAGES_DIR, 'gt.json')
 OUT_PATH = os.path.join(ROOT, 'informe', 'duplicates_analysis.json')
@@ -134,7 +138,8 @@ def main():
     real_limpio = test_class[~es_duplicada]
     acc_limpio = accuracy(pred_limpio, real_limpio)
 
-    # Accuracy solo sobre los duplicados (espera ~100% si el KNN los memoriza)
+    # Accuracy solo sobre los duplicados. Con k=3 puede no ser 100% porque
+    # los otros vecinos tambien votan.
     pred_dup = pred_full[es_duplicada]
     real_dup = test_class[es_duplicada]
     acc_dup = accuracy(pred_dup, real_dup) if len(pred_dup) > 0 else None

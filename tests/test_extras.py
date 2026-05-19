@@ -8,7 +8,7 @@ Cubre:
 Filosofia: pocos tests, directos, sin dependencias mas alla del propio
 proyecto. Se ejecutan con:
 
-    python test_extras.py
+    python tests/test_extras.py
 
 Si todos pasan, exit code 0. Si alguno falla, exit code 1 y traza visible.
 """
@@ -18,9 +18,11 @@ import sys
 import tempfile
 
 # Permitimos correr desde la raiz del proyecto sin pip install -e
-ROOT = os.path.dirname(os.path.abspath(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPTS_DIR = os.path.join(ROOT, 'scripts')
+for path in (ROOT, SCRIPTS_DIR):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 
 # -----------------------------------------------------------------------------

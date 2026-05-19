@@ -17,16 +17,19 @@ con interfaz web que permite consultas tipo `"pink dress"`.
 ├── KNN.py                    # Clasificador K-Nearest Neighbours (forma)
 ├── Kmeans.py                 # Clustering K-Means (color)
 ├── my_labeling.py            # Etiquetador end-to-end, buscador y parse_query_text
-├── analysis.py               # 4 analisis de eficiencia (genera informe/results.json)
-├── analyze_duplicates.py     # Analisis metodologico: duplicados train/test (extra)
-├── preprocess_dataset.py     # Pre-etiqueta el dataset con nuestros modelos
 ├── predicted_labels.json     # Etiquetas predichas para train+test (3.179 imagenes)
 ├── utils.py                  # Utilidades del template (rgb2gray, get_color_prob)
 ├── utils_data.py             # Utilidades del template (read_dataset, visualize_*)
-├── test_knn.py               # Script de prueba del KNN
-├── test_kmeans.py            # Script de prueba del KMeans
-├── test_labeling.py          # Script de prueba del etiquetador y retrievals
-├── test_extras.py            # Tests del parser textual, /search y hashing
+├── scripts/                  # Scripts reproducibles de ejecucion/analisis
+│   ├── analysis.py           # 4 analisis de eficiencia (genera informe/results.json)
+│   ├── analyze_duplicates.py # Analisis metodologico: duplicados train/test (extra)
+│   ├── preprocess_dataset.py # Pre-etiqueta el dataset con nuestros modelos
+│   └── generar_graficas.py   # Genera las figuras a partir de los JSON
+├── tests/                    # Pruebas manuales y tests simples
+│   ├── test_knn.py           # Script de prueba del KNN
+│   ├── test_kmeans.py        # Script de prueba del KMeans
+│   ├── test_labeling.py      # Script de prueba del etiquetador y retrievals
+│   └── test_extras.py        # Tests del parser textual, /search y hashing
 ├── images/                   # Dataset de entrenamiento y test
 │   ├── gt.json               # Ground truth (etiquetas reales)
 │   ├── gt_reduced.json       # Ground truth extendido con coordenadas
@@ -36,7 +39,6 @@ con interfaz web que permite consultas tipo `"pink dress"`.
 │   ├── informe.md            # Documento principal
 │   ├── results.json          # Datos de los 4 analisis
 │   ├── duplicates_analysis.json   # Resultado del analisis de duplicados
-│   ├── generar_graficas.py   # Genera las figuras a partir de los JSON
 │   └── figures/              # PNGs que se insertan en el informe
 └── app/                      # Frontend Flask
     ├── app.py                # Backend con endpoints /predict y /search
@@ -58,10 +60,10 @@ pip install -r requirements.txt
 ### 1. Probar los modelos por separado
 
 ```bash
-python test_knn.py        # Accuracy del KNN con varios k
-python test_kmeans.py     # KMeans + tabla WCD por K
-python test_labeling.py   # predict_image + retrievals
-python test_extras.py     # Parser textual, /search y hash de duplicados
+python tests/test_knn.py        # Accuracy del KNN con varios k
+python tests/test_kmeans.py     # KMeans + tabla WCD por K
+python tests/test_labeling.py   # predict_image + retrievals
+python tests/test_extras.py     # Parser textual, /search y hash de duplicados
 ```
 
 ### 2. Generar las etiquetas predichas para el frontend
@@ -69,7 +71,7 @@ python test_extras.py     # Parser textual, /search y hash de duplicados
 Solo hay que ejecutarlo una vez (tarda ~2 minutos):
 
 ```bash
-python preprocess_dataset.py
+python scripts/preprocess_dataset.py
 ```
 
 Crea `predicted_labels.json` con las etiquetas que ha predicho nuestro sistema para
@@ -93,7 +95,7 @@ Despues abrir el navegador en **http://127.0.0.1:5001**:
 ### 4. Ejecutar los 4 analisis de eficiencia
 
 ```bash
-python analysis.py
+python scripts/analysis.py
 ```
 
 Tarda unos minutos. Los resultados se guardan en `informe/results.json` y se incluyen
@@ -102,7 +104,7 @@ en el informe.
 ### 5. Analisis metodologico de duplicados (extra)
 
 ```bash
-python analyze_duplicates.py
+python scripts/analyze_duplicates.py
 ```
 
 Detecta las imagenes duplicadas binariamente entre train y test (~25% del test),
@@ -112,7 +114,7 @@ recalcula el accuracy del KNN sin esas duplicadas y guarda el resultado en
 ### 6. Regenerar las graficas del informe
 
 ```bash
-python informe/generar_graficas.py
+python scripts/generar_graficas.py
 ```
 
 Lee los JSON de resultados y produce las 8 figuras en `informe/figures/` que se

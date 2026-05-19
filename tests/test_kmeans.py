@@ -5,9 +5,15 @@ que find_bestK encuentra una K razonable y que get_colors devuelve los
 nombres de los colores predominantes.
 """
 
+import os
+import sys
 import time
 import numpy as np
 from PIL import Image
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from Kmeans import KMeans, get_colors
 

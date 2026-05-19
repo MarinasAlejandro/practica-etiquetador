@@ -14,12 +14,21 @@ Salida: predicted_labels.json con la forma:
 
 import json
 import os
+import sys
 import time
 import numpy as np
 from PIL import Image
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
 from KNN import KNN
 import Kmeans
+
+IMAGES_DIR = os.path.join(ROOT, 'images')
+GT_PATH = os.path.join(IMAGES_DIR, 'gt.json')
+OUT_PATH = os.path.join(ROOT, 'predicted_labels.json')
 
 
 def cargar_imagenes_con_nombres(root_folder, gt_path, split, w=60, h=80):
@@ -43,10 +52,10 @@ def main():
     print("Cargando imagenes del dataset...")
     t0 = time.time()
     train_imgs, train_names, train_class = cargar_imagenes_con_nombres(
-        './images', './images/gt.json', 'train'
+        IMAGES_DIR, GT_PATH, 'train'
     )
     test_imgs, test_names, test_class = cargar_imagenes_con_nombres(
-        './images', './images/gt.json', 'test'
+        IMAGES_DIR, GT_PATH, 'test'
     )
     print(f"  train: {len(train_imgs)} imagenes")
     print(f"  test:  {len(test_imgs)} imagenes")
@@ -99,7 +108,7 @@ def main():
     print(f"  total: {time.time() - t0:.0f}s\n")
 
     # 5. Guardar
-    out = './predicted_labels.json'
+    out = OUT_PATH
     with open(out, 'w') as f:
         json.dump(resultado, f, ensure_ascii=False, indent=2)
     print(f"Guardado en {out} ({len(resultado)} imagenes etiquetadas)")
