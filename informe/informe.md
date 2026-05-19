@@ -37,16 +37,10 @@ Sandals=254, Socks=241 y Jeans=233 ocupando el resto del rango. Hay ligeras dife
 entre clases, pero no un desbalance fuerte que distorsione las métricas: el dataset oficial
 está deliberadamente nivelado.
 
-### Nota metodológica — duplicados entre train y test
-
-Antes de presentar resultados conviene avisar de una característica conocida del dataset
-oficial: **219 imágenes del test (un 25,7 %) son binariamente idénticas a imágenes que
-también están en el train**. El cálculo es trivial: hash SHA-256 del archivo .jpg y cruzar
-los dos splits (ver `scripts/analyze_duplicates.py`).
-
-No se modifica el split oficial — los criterios de aceptación de la práctica piden
-mantenerlo — pero **reportamos el accuracy también sin los duplicados** como análisis
-adicional (sección 2.5) para que los números sean comparables con un test "limpio".
+Como comprobación adicional del dataset, se detectaron algunas imágenes duplicadas entre
+train y test. No se modifica el split oficial, porque es el que proporciona la práctica,
+pero en el análisis se incluye una tabla breve comparando el accuracy oficial con el
+accuracy sin esas duplicadas.
 
 ---
 
@@ -340,14 +334,11 @@ Esta observación valida indirectamente otra decisión del PDF: pasar a gris no 
 simplifica el espacio de características (reduce de 14.400 a 4.800 dimensiones), sino
 que también garantiza que todas las features estén en la misma escala.
 
-### 2.5 Análisis metodológico — duplicados train/test (extra)
+### 2.5 Comprobación adicional — duplicados train/test
 
-Como se ha avisado en la nota metodológica de la introducción, el split oficial contiene
-**219 imágenes (25,7 % del test)** cuyo contenido binario es idéntico al de imágenes del
-train. Mantener el split oficial es obligatorio, pero conviene reportar **qué pasaría si
-los quitáramos**, para entender cuánto del 90 % de accuracy se debe a memorización pura.
-
-Se vuelve a calcular el accuracy del KNN (k = 3) sobre tres subsets del test:
+Esta parte no cambia el algoritmo ni el split oficial. Solo comprueba si el resultado del
+KNN depende demasiado de imágenes repetidas entre train y test. Se detectan **219 imágenes
+duplicadas** en el test (25,7 %) y se recalcula el accuracy de KNN con k = 3:
 
 | Subset | n imágenes | Accuracy |
 |---|---:|---:|
@@ -355,24 +346,10 @@ Se vuelve a calcular el accuracy del KNN (k = 3) sobre tres subsets del test:
 | Test sin duplicados (test limpio) | 632 | **89,72 %** |
 | Solo las duplicadas | 219 | **91,78 %** |
 
-**Conclusión metodológica:** la diferencia entre el accuracy oficial y el "limpio" es de
-apenas **0,53 puntos porcentuales**. Esto es una buena noticia: aunque el dataset tiene
-duplicados, el KNN **no está apoyándose exclusivamente en memorizarlos**. La accuracy sobre
-las duplicadas (91,78 %) tampoco llega al 100 %, y la razón principal es la **k = 3** del
-clasificador: aunque cada duplicada tenga un vecino idéntico (distancia 0) en el train,
-los otros dos vecinos pueden ser de otra clase y ganar la votación por mayoría. Con k = 1
-las duplicadas sí darían el 100 % porque el vecino más cercano sería siempre la copia
-exacta.
-
-![Accuracy con y sin duplicados](figures/fig7_duplicados.png)
-
-A efectos de la rúbrica del PDF, la cifra oficial sigue siendo 90,25 %. Reportamos la
-limpia (89,72 %) como **análisis de robustez metodológica**, no como sustitución.
-
-Es importante recalcar que **el split oficial NO se modifica**: ni `gt.json` ni el orden
-de las imágenes. El análisis se hace post-hoc cruzando hashes SHA-256 y filtrando las
-predicciones por una máscara booleana. El script reproducible es `scripts/analyze_duplicates.py`
-y guarda el detalle en `informe/duplicates_analysis.json`.
+La diferencia entre el accuracy oficial y el accuracy sin duplicados es de solo **0,53
+puntos porcentuales**. Por tanto, los duplicados existen, pero no cambian de forma relevante
+la lectura del resultado. La cifra que se mantiene como principal para la práctica es la
+oficial (**90,25 %**), porque el split proporcionado no se modifica.
 
 ### 2.6 Matriz de confusión (qué clases se confunden)
 
